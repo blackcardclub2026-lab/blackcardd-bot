@@ -83,7 +83,7 @@ def webapp_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[[
             KeyboardButton(
-                text="🂡 Подать ещё одну заявку",
+                text="🂡 Подать заявку на другую дату",
                 web_app=WebAppInfo(url=WEBAPP_URL),
             )
         ]],
@@ -171,7 +171,7 @@ async def process_phone(message: Message, state: FSMContext):
     await message.answer(
         "Спасибо! Ваша заявка в <b>Black Card</b> принята ✅\n"
         "Администратор клуба свяжется с вами лично.\n\n"
-        "Хотите зарегистрировать ещё одного гостя — нажмите кнопку ниже.",
+        "Хотите подать заявку на другую дату — нажмите кнопку ниже.",
         reply_markup=webapp_keyboard(),
         parse_mode="HTML",
     )
