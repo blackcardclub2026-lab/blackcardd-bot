@@ -79,6 +79,18 @@ def save_to_sheet(name: str, reg_date: str, phone: str, username: str, user_id):
     ])
 
 
+def webapp_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[[
+            KeyboardButton(
+                text="🂡 Подать ещё одну заявку",
+                web_app=WebAppInfo(url=WEBAPP_URL),
+            )
+        ]],
+        resize_keyboard=True,
+    )
+
+
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
@@ -151,15 +163,16 @@ async def process_phone(message: Message, state: FSMContext):
         logging.exception("Ошибка записи в Google Sheets")
         await message.answer(
             "Произошла ошибка при сохранении заявки. Попробуйте ещё раз чуть позже.",
-            reply_markup=ReplyKeyboardRemove(),
+            reply_markup=webapp_keyboard(),
         )
         await state.clear()
         return
 
     await message.answer(
         "Спасибо! Ваша заявка в <b>Black Card</b> принята ✅\n"
-        "Администратор клуба свяжется с вами лично.",
-        reply_markup=ReplyKeyboardRemove(),
+        "Администратор клуба свяжется с вами лично.\n\n"
+        "Хотите зарегистрировать ещё одного гостя — нажмите кнопку ниже.",
+        reply_markup=webapp_keyboard(),
         parse_mode="HTML",
     )
     await state.clear()
