@@ -19,13 +19,12 @@ from aiogram.types import (
 import gspread
 from google.oauth2.service_account import Credentials
 
-# ==== НАСТРОЙКИ ====
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8917448855:AAHV-39g9yGxhBXtMScNXPTf6phYVp_nZMg")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://blackcardclub2026-lab.github.io/blackcard/")
 
 # Google Sheets
 CREDENTIALS_FILE = "credentials.json"
-GOOGLE_CREDENTIALS_JSON = os.getenv("GOOGLE_CREDENTIALS_JSON")  # содержимое credentials.json, если задано через переменную окружения
+GOOGLE_CREDENTIALS_JSON = os.getenv("GOOGLE_CREDENTIALS_JSON")
 SPREADSHEET_ID = "1j2kgbvDJ56QSTulWeOLt583hz-csYMuqQTTsw4e4Qfo"
 SHEET_NAME = "Лист 1"
 
@@ -49,6 +48,7 @@ if GOOGLE_CREDENTIALS_JSON:
     _creds = Credentials.from_service_account_info(_creds_info, scopes=SCOPES)
 else:
     _creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
+
 _gc = gspread.authorize(_creds)
 _spreadsheet = _gc.open_by_key(SPREADSHEET_ID)
 
@@ -64,14 +64,15 @@ def ensure_headers():
     ws = get_worksheet()
     first_row = ws.row_values(1)
     if not first_row:
-        ws.append_row(["Дата", "Имя", "Телефон", "Username", "Telegram ID"])
+        ws.append_row(["Дата заявки", "Никнейм", "Дата регистрации", "Телефон", "Username", "Telegram ID"])
 
 
-def save_to_sheet(name: str, phone: str, username: str, user_id):
+def save_to_sheet(name: str, reg_date: str, phone: str, username: str, user_id):
     ws = get_worksheet()
     ws.append_row([
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         name,
+        reg_date or "—",
         phone,
         f"@{username}" if username else "—",
         str(user_id),
@@ -107,14 +108,15 @@ async def process_webapp_data(message: Message, state: FSMContext):
         return
 
     name = (data.get("name") or "").strip()
+    reg_date = (data.get("reg_date") or "").strip()
     username = data.get("username") or message.from_user.username or ""
     user_id = data.get("tg_id") or message.from_user.id
 
     if not name:
-        await message.answer("Не удалось получить имя, попробуйте отправить форму ещё раз.")
+        await message.answer("Не удалось получить никнейм, попробуйте отправить форму ещё раз.")
         return
 
-    await state.update_data(name=name, username=username, user_id=user_id)
+    await state.update_data(name=name, reg_date=reg_date, username=username, user_id=user_id)
 
     kb = ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="📱 Отправить номер телефона", request_contact=True)]],
@@ -136,12 +138,15 @@ async def process_phone(message: Message, state: FSMContext):
 
     data = await state.get_data()
     name = data.get("name")
+    reg_date = data.get("reg_date")
     username = data.get("username") or message.from_user.username or ""
     user_id = data.get("user_id") or message.from_user.id
     phone = message.contact.phone_number
 
+    # Заявки сохраняются каждый раз новой строкой, без проверки на повторную подачу —
+    # пользователь может регистрироваться повторно сколько угодно раз.
     try:
-        save_to_sheet(name, phone, username, user_id)
+        save_to_sheet(name, reg_date, phone, username, user_id)
     except Exception:
         logging.exception("Ошибка записи в Google Sheets")
         await message.answer(
