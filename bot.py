@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from datetime import datetime
 
 from aiogram import Bot, Dispatcher, F
@@ -38,6 +39,18 @@ class Form(StatesGroup):
     waiting_for_phone = State()
 
 
+def webapp_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[[
+            KeyboardButton(
+                text="🂡 Подать заявку на другую дату",
+                web_app=WebAppInfo(url=WEBAPP_URL),
+            )
+        ]],
+        resize_keyboard=True,
+    )
+
+
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
@@ -68,27 +81,32 @@ def ensure_headers():
 
 
 def save_to_sheet(name: str, reg_date: str, phone: str, username: str, user_id):
-    ws = get_worksheet()
-    ws.append_row([
+    """Пишет строку в таблицу с несколькими повторными попытками —
+    Google Sheets API иногда кратковременно недоступен (503), и такие
+    сбои не должны приводить к потере заявки."""
+    row = [
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         name,
         reg_date or "—",
         phone,
         f"@{username}" if username else "—",
         str(user_id),
-    ])
+    ]
 
+    last_error = None
+    for attempt in range(1, 4):  # 3 попытки: сразу, через 2с, через 5с
+        try:
+            ws = get_worksheet()
+            ws.append_row(row)
+            return
+        except Exception as e:
+            last_error = e
+            logging.warning(f"Попытка {attempt} записи в Google Sheets не удалась: {e}")
+            if attempt < 3:
+                time.sleep(2 if attempt == 1 else 5)
 
-def webapp_keyboard():
-    return ReplyKeyboardMarkup(
-        keyboard=[[
-            KeyboardButton(
-                text="🂡 Подать заявку на другую дату",
-                web_app=WebAppInfo(url=WEBAPP_URL),
-            )
-        ]],
-        resize_keyboard=True,
-    )
+    # Все попытки исчерпаны — пробрасываем последнюю ошибку выше
+    raise last_error
 
 
 @dp.message(CommandStart())
@@ -155,17 +173,21 @@ async def process_phone(message: Message, state: FSMContext):
     user_id = data.get("user_id") or message.from_user.id
     phone = message.contact.phone_number
 
-    # Заявки сохраняются каждый раз новой строкой, без проверки на повторную подачу —
-    # пользователь может регистрироваться повторно сколько угодно раз.
     try:
         save_to_sheet(name, reg_date, phone, username, user_id)
     except Exception:
-        logging.exception("Ошибка записи в Google Sheets")
+        logging.exception("Ошибка записи в Google Sheets (все попытки исчерпаны)")
         await message.answer(
-            "Произошла ошибка при сохранении заявки. Попробуйте ещё раз чуть позже.",
-            reply_markup=webapp_keyboard(),
+            "Google Таблицы временно недоступны. Пожалуйста, нажмите кнопку "
+            "«Отправить номер телефона» ещё раз через минуту — данные повторно не потеряются.",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text="📱 Отправить номер телефона", request_contact=True)]],
+                resize_keyboard=True,
+                one_time_keyboard=True,
+            ),
         )
-        await state.clear()
+        # состояние НЕ сбрасываем — данные (имя, дата) остаются, чтобы не заставлять
+        # пользователя заполнять форму заново
         return
 
     await message.answer(
