@@ -16,8 +16,6 @@ from aiogram.types import (
     KeyboardButton,
     ReplyKeyboardRemove,
     WebAppInfo,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
 )
 import gspread
 from google.oauth2.service_account import Credentials
@@ -31,7 +29,6 @@ SPREADSHEET_ID = "1j2kgbvDJ56QSTulWeOLt583hz-csYMuqQTTsw4e4Qfo"
 SHEET_NAME = "Лист 1"
 
 ADMIN_PHONE = "+998 99 983 93 33"
-ADMIN_PHONE_TEL = "tel:+998999839333"  # без пробелов/скобок, для кнопки-звонка
 
 logging.basicConfig(level=logging.INFO)
 
@@ -186,20 +183,12 @@ async def process_phone(message: Message, state: FSMContext):
         )
         return
 
-    call_kb = InlineKeyboardMarkup(
-        inline_keyboard=[[
-            InlineKeyboardButton(text="📞 Позвонить администратору", url=ADMIN_PHONE_TEL)
-        ]]
-    )
     await message.answer(
         "Спасибо! Ваша заявка в <b>Black Card</b> принята ✅\n"
-        "Для подтверждения регистрации свяжитесь с администратором клуба.",
-        reply_markup=call_kb,
-        parse_mode="HTML",
-    )
-    await message.answer(
+        f"Для подтверждения регистрации свяжитесь с администратором клуба: {ADMIN_PHONE}\n\n"
         "Хотите подать заявку на другую дату — нажмите кнопку ниже.",
         reply_markup=webapp_keyboard(),
+        parse_mode="HTML",
     )
     await state.clear()
 
