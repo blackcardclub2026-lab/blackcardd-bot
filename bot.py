@@ -3,7 +3,13 @@ import json
 import logging
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+TASHKENT_TZ = timezone(timedelta(hours=5))
+
+
+def now_tashkent():
+    return datetime.now(TASHKENT_TZ)
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
@@ -83,7 +89,7 @@ def ensure_headers():
 
 def save_to_sheet(name: str, reg_date: str, phone: str, username: str, user_id):
     row = [
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        now_tashkent().strftime("%Y-%m-%d %H:%M:%S"),
         name,
         reg_date or "—",
         phone,
