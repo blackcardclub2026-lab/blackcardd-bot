@@ -16,6 +16,8 @@ from aiogram.types import (
     KeyboardButton,
     ReplyKeyboardRemove,
     WebAppInfo,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
 )
 import gspread
 from google.oauth2.service_account import Credentials
@@ -23,11 +25,13 @@ from google.oauth2.service_account import Credentials
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8917448855:AAHV-39g9yGxhBXtMScNXPTf6phYVp_nZMg")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://blackcardclub2026-lab.github.io/blackcard/")
 
-# Google Sheets
 CREDENTIALS_FILE = "credentials.json"
 GOOGLE_CREDENTIALS_JSON = os.getenv("GOOGLE_CREDENTIALS_JSON")
 SPREADSHEET_ID = "1j2kgbvDJ56QSTulWeOLt583hz-csYMuqQTTsw4e4Qfo"
 SHEET_NAME = "Лист 1"
+
+ADMIN_PHONE = "+998 99 983 93 33"
+ADMIN_PHONE_TEL = "tel:+998999839333"  # без пробелов/скобок, для кнопки-звонка
 
 logging.basicConfig(level=logging.INFO)
 
@@ -81,9 +85,6 @@ def ensure_headers():
 
 
 def save_to_sheet(name: str, reg_date: str, phone: str, username: str, user_id):
-    """Пишет строку в таблицу с несколькими повторными попытками —
-    Google Sheets API иногда кратковременно недоступен (503), и такие
-    сбои не должны приводить к потере заявки."""
     row = [
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         name,
@@ -92,9 +93,8 @@ def save_to_sheet(name: str, reg_date: str, phone: str, username: str, user_id):
         f"@{username}" if username else "—",
         str(user_id),
     ]
-
     last_error = None
-    for attempt in range(1, 4):  # 3 попытки: сразу, через 2с, через 5с
+    for attempt in range(1, 4):
         try:
             ws = get_worksheet()
             ws.append_row(row)
@@ -104,8 +104,6 @@ def save_to_sheet(name: str, reg_date: str, phone: str, username: str, user_id):
             logging.warning(f"Попытка {attempt} записи в Google Sheets не удалась: {e}")
             if attempt < 3:
                 time.sleep(2 if attempt == 1 else 5)
-
-    # Все попытки исчерпаны — пробрасываем последнюю ошибку выше
     raise last_error
 
 
@@ -186,16 +184,22 @@ async def process_phone(message: Message, state: FSMContext):
                 one_time_keyboard=True,
             ),
         )
-        # состояние НЕ сбрасываем — данные (имя, дата) остаются, чтобы не заставлять
-        # пользователя заполнять форму заново
         return
 
+    call_kb = InlineKeyboardMarkup(
+        inline_keyboard=[[
+            InlineKeyboardButton(text="📞 Позвонить администратору", url=ADMIN_PHONE_TEL)
+        ]]
+    )
     await message.answer(
         "Спасибо! Ваша заявка в <b>Black Card</b> принята ✅\n"
-        "Администратор клуба свяжется с вами лично.\n\n"
+        "Для подтверждения регистрации свяжитесь с администратором клуба.",
+        reply_markup=call_kb,
+        parse_mode="HTML",
+    )
+    await message.answer(
         "Хотите подать заявку на другую дату — нажмите кнопку ниже.",
         reply_markup=webapp_keyboard(),
-        parse_mode="HTML",
     )
     await state.clear()
 
