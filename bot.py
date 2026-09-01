@@ -184,8 +184,10 @@ async def process_phone(message: Message, state: FSMContext):
         return
 
     await message.answer(
-        "Спасибо! Ваша заявка в <b>Black Card</b> принята ✅\n"
-        f"Для подтверждения регистрации свяжитесь с администратором клуба: {ADMIN_PHONE}\n\n"
+        "Спасибо! Ваша заявка в <b>Black Card</b> принята ✅\n\n"
+        "Для подтверждения регистрации свяжитесь с администратором клуба:\n"
+        f"<code>{ADMIN_PHONE}</code>\n"
+        "<i>нажмите на номер, чтобы скопировать</i>\n\n"
         "Хотите подать заявку на другую дату — нажмите кнопку ниже.",
         reply_markup=webapp_keyboard(),
         parse_mode="HTML",
