@@ -39,8 +39,8 @@ SHEET_NAME = "Лист 1"
 
 ADMIN_PHONE = "+998 99 983 93 33"
 CLUB_ADDRESS = "Ташкент, улица Сайрам, 23"
-CLUB_LAT = "41.3328"
-CLUB_LON = "69.3247"
+CLUB_LAT = "41.332434"
+CLUB_LON = "69.324519"
 YANDEX_TAXI_URL = (
     "https://3.redirect.appmetrica.yandex.com/route?"
     f"end-lat={CLUB_LAT}&end-lon={CLUB_LON}"
