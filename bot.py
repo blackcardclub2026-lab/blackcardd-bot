@@ -22,9 +22,12 @@ from aiogram.types import (
     KeyboardButton,
     ReplyKeyboardRemove,
     WebAppInfo,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
 )
 import gspread
 from google.oauth2.service_account import Credentials
+from urllib.parse import quote
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8917448855:AAHV-39g9yGxhBXtMScNXPTf6phYVp_nZMg")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://blackcardclub2026-lab.github.io/blackcard/")
@@ -35,6 +38,13 @@ SPREADSHEET_ID = "1j2kgbvDJ56QSTulWeOLt583hz-csYMuqQTTsw4e4Qfo"
 SHEET_NAME = "Лист 1"
 
 ADMIN_PHONE = "+998 99 983 93 33"
+CLUB_ADDRESS = "Ташкент, улица Сайрам, 23"
+YANDEX_TAXI_URL = (
+    "https://3.redirect.appmetrica.yandex.com/route?"
+    f"end-address={quote(CLUB_ADDRESS)}"
+    "&appmetrica_tracking_id=1178268795219780156"
+)
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -189,12 +199,23 @@ async def process_phone(message: Message, state: FSMContext):
         )
         return
 
+    taxi_kb = InlineKeyboardMarkup(
+        inline_keyboard=[[
+            InlineKeyboardButton(text="🚕 Вызвать Яндекс Такси", url=YANDEX_TAXI_URL)
+        ]]
+    )
+
     await message.answer(
         "Спасибо! 😊 Ваша заявка в <b>Black Card</b> принята ✅\n\n"
         f"📞 Для подтверждения регистрации, пожалуйста, свяжитесь с администратором клуба 👤: {ADMIN_PHONE} ☎️\n\n"
+        "🎉 Вы успешно прошли регистрацию, ждём вас в нашем заведении по адресу:\n"
+        f"📍 {CLUB_ADDRESS}",
+        reply_markup=taxi_kb,
+        parse_mode="HTML",
+    )
+    await message.answer(
         "🗓️ Хотите подать заявку на другую дату — нажмите кнопку ниже.",
         reply_markup=webapp_keyboard(),
-        parse_mode="HTML",
     )
     await state.clear()
 
